@@ -340,11 +340,43 @@ fn fs_main(in: VertexOutput) -> GbufferOutput {
 
 </details>
 
-Personally, I feel this current approach is messy; it results in a massive list of textures and cameras to import and consumes a lot of code. I attempted to use 3D Textures; however, they have size limits much lower than 2D, and area is also an extra feature that has to be enabled, if I am not mistaken. This is an area I would like to improve; however, I am currently unsure how to go about it.  
+Personally, I feel this current approach is messy; it results in a massive list of textures and cameras to import and consumes a lot of code. I attempted to use 3D Textures; however, they have size limits much lower than 2D, and area is an additional feature that must be enabled, if I am not mistaken. This is an area I would like to improve; however, I am currently unsure how to go about it.  
   
 <img alt="image" src="https://github.com/user-attachments/assets/3b60c9d0-2eae-4430-8d2a-7d8cf9801379" />
 
+# Entity rendering
+The next step I felt like tackling was getting entity rendering in my world. For the entities, I wanted them to be composed of voxels, like the game world. My thoughts on achieving this were that each entity would be made up of meshes.   
+The first approach I thought of was to render each as its own mesh, with a shared buffer created at program boot. However, learning from my mistake last time, having each entity be its own draw call would take up far too many draw calls, as I wanted many, many entities on screen at once. The method I used for rendering world terrain also wouldn't work, as each entity would need to be moved each frame and moving every vertex would be far too expensive when there are tons of entities in the world.  
+Once again, I can't remember the exact way I came across this, but it was along the lines of having heard about instances before when doing work in Blender (https://www.blender.org/) and having heard the term again in wgpu, I thought it would work similarly, so I decided to look into this approach.  
+When implementing this, however, I ran into a problem: the entities would need to somehow pass location information to each instance. This was achieved fairly easily. Basically, there is an instance buffer for each mesh which stores data for each instance. In this buffer, it can be ordered much more easily than in the chunk buffer, since each instance has a fixed amount of data. The only info I would pass would be a matrix offset used to set the location.   
+In this buffer, I would then update all entities' positions for each frame. This approach sounds wasteful, because it kind of is, but there is not actually that much information to store, as a matrix is quite small, so all the entities can be written fairly easily. Orignally I planned on just rendering the in use locations and keeping track of free slots so put instances into instead of rewriting but I later found out that instnace rendeirng has to be in order/a range and can't be random instances so I had to change plan for it to all be put into buffer in order.  
+Another problem that can be noticed is that a buffer for each entity would mean there is a hard cap for how many of each entity, and also would be wasting the extra amount not used till the hard cap, but this isn't as bad as it sounds, as in practice you can have it quite large for not much VRAM usage. Another downside is that each mesh for each entity needs its own draw call. However, the cost of this is still not that high, as there likely won't be many types of entities, and there will also likely be an out-of-view kind of view kinda system later, making the impact even less.   
+If I am not mistaken, the current approach that I am using also doesn't factor in that some frames, no entities will be removed however majority of frames entity meshs will move as i plan on adding interplastion which means that there isn't a huge ammount of point in testing if a buffer update can be skiped as it wouldn't happen a large ammount of times.  It may happen in some situations, but it's likely better to write the whole thing in one go instead of 2 split update calls to each mesh buffer (haven't tested, assuming).  
+
+<img alt="image" src="https://github.com/user-attachments/assets/ca122e41-7d17-495e-99f0-7051621836a6" />
+<img alt="image" src="https://github.com/user-attachments/assets/4eb25ff4-c6cb-4902-88dc-e9d9c5951754" />
 
 
+<details>
+<summary>Example render code</summary>
+ 
+```wgsl
+//render entities
+for mesh in &entity_instances_to_render {
+    let buffer_info = render_state.mesh_instances.get(&mesh.0).unwrap();
+    let vertex_info = render_state.mesh_id_reference.get(&mesh.0).expect(format!("Failed to render entity as texture id {} is not loaded", mesh.0.0).as_str());
+
+    gbuffer_render_pass.set_vertex_buffer(0, render_state.entity_meshs_buffer.slice(..));
+    gbuffer_render_pass.set_vertex_buffer(1, buffer_info.instances_buffer.slice(..));
+
+    gbuffer_render_pass.draw(vertex_info.start..(vertex_info.start+vertex_info.length), 0..(mesh.1.len() as u32));
+}
+```
+
+</details>
+
+Getting it to render for the sun was quite simple as well; I just used the same render code for drawing depth calculations. To me this feels wasteful, as i am rendeirng everything twice however I don't think there is a beter way of doing it and I couldn't seem to find one. 
+
+<img alt="image" src="https://github.com/user-attachments/assets/d8e6642e-12c1-4b12-89bc-57986f230675" />
 
 
