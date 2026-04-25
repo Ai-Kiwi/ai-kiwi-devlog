@@ -13,10 +13,11 @@ Because of the above reason, the os will be designed with portability in mind so
 For if the OS is POSTIX, I decided to follow the majority of POSTIX while making some changes.   
  - Everything is a file: I decided to scrap this. Personally, I am not a fan, and I feel it makes stuff messy.
  - Introduced a new IPC type. The types are 
- - - Pipe: one-way send, one-way receive.
- - - Socket: predefined code/id which is global and you can access. It's one that receives many processes send.
- - - Caster: predefined code/id which is global and you can access. It's one send, many receive. Each client will have its own buffer of items; they decide the size, and it starts deleting once it starts filling up. If no one is subscribed, the data is dropped. 
-If data is accessed on request, it can be done via a Caster with length one fairly cheaply; if it needs to be even faster, it can be done with memory mapped to RAM. 
-For permissions, I plan to add a tag to each process indicating whether it can access resources such as the framebuffer or the UART. This tag idea will apply to types as well for Caster and Socket. The permissions will be decided by the parent process which is launching it, a parent can't launch with more perms then it has. The idea of file access will be scrapped, and will possibly revisit it later. 
+   - Pipe: one-way send, one-way receive.
+   - Socket: predefined code/id which is global and you can access. It's one that receives many processes send.
+   - Caster: predefined code/id which is global and you can access. It's one send, many receive. Each client will have its own buffer of items; they decide the size, and it starts deleting once it starts filling up. If no one is subscribed, the data is dropped.
+
+If data is accessed on request, it can be done via a Caster with length one fairly cheaply; if it needs to be even faster, it can be done with memory mapped to RAM.    
+For permissions, I plan to add a tag to each process indicating whether it can access resources such as the framebuffer or the UART. This tag idea will apply to types as well for Caster and Socket. The permissions will be decided by the parent process which is launching it, a parent can't launch with more perms then it has. The idea of file access will be scrapped, and will possibly revisit it later.   
 
 
