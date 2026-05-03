@@ -1,0 +1,32 @@
+# The Problem
+During the development of my DTB parser, I ran into a problem. I needed a place to store the data. Putting it into a stack would cause it to be deleted, and it is too large to return from a function easily. The solution was fairly self-explanatory: I needed a way to identify safe locations to place pointers so I could write data to them. In normal C, using the std lib, this is malloc if i am not mistaken (could be incorrect as i have never used C std as this is my first time using C lol). The solution to this was a simpleish fix: I just put the data into the next available RAM location; however, this fix is a one-time thing, and a much better system will need to be coded in order for the os to use. The first thing I thought of is that this data will need to be shared between the user processes and the kernel. This means it will need a way to split the data, which is called a pager.   
+  
+My thought process for this stage is that I should most likely set up a pager system, since trying to figure out which data is kernel vs user and having different systems using RAM would likely cause more issues, and it would be much easier to just reserve the space. Another benefit is that I would have pages all aligned to the page size, greatly simplifying everything.  
+
+# Pager
+For the pager, my thought process followed a similar approach to the buffer with defragmentation in my past project (https://github.com/Ai-Kiwi/ai-kiwi-devlog/blob/main/voxelith/19-4-2026%20-%20Overview.md). Basically, I would store free ranges where buffers could be used. This would allow finding the next slot in O(1) time. Another advantage is that it would handle it basically for free if memory locations were not all in a row and there were unusable blank areas. However, as the number of free spots changes, the list would change too, and this would quickly become messy. If you have too many free ranges, you may need to move pages around to make room for storing a larger array, which would be very messy.  
+  
+My next idea was a simpler approach: I would store a list for each possible page location as a straight list, and each page would be a bit for if in use. This sounds like a bad idea; however, in practice, this would be a lot better than it sounds. The ram usage would be surprisingly low, as with the planned 4096B (4KB) page sizes, it would lead to, for a reasonable 4GB or 8GB system, ram usage in single-digit megabytes for this "free page list". Another advantage is that when you want to fetch which pages are free, the whole list can fit in the CPU cache, meaning it would be fairly fast, and, as it's continuous, it could also be easily predicted ahead of time by the CPU. The locations could also be stored as 64-bit values, meaning that in almost 1 CPU cycle, you can test 64 different page locations. 
+> [!NOTE]
+> Possible optimisations later as well can be added, such as jumping to the next available free slot by storing the first free slot, so if a large chunk is already used, it can skip that. Could have this value updated on the page released if it is smaller than the page released's location.  
+
+I can as thinking this see possible problems with multicore processing. The plan is to kinda avoid most of these and come back to it when I plan on implementing it.   
+  
+Something else worth considering here as well is putting the kernel pages at the end of the page list. The reason is that this area can be marked as kernel data in the pager, so that if an attack attempts to read it, it can't, since it's not user RAM. This acts as another defence layer to help security.  
+> [!CAUTION]
+> Depending on the approach for this and the CPU used, this can also make you susceptible to a meltdown attack. The CPUs this operating system targets are too new to be susceptible to meltdown, so this will be left unfixed. However, in a real operating system, you would want to test whether it is susceptible, and if so, automatically switch the page context to a custom one set up for kernel allocation on trap running so that the user process can't access kernel data via prefetch.  
+  
+Something else with this planned approach, as mentioned briefly before, is the idea of areas of memory we can't use. This does pose a problem for this approach. A possible way to fix this is to premark these areas as already used in the bitmap. However, although this works for a short break, it can be very wasteful and use a lot of RAM for a long, unusable area. This could be a large amount; on RISC-V, this can only be up to 512 GB. However, as this OS may later support other architectures, it should be coded in a way that makes it easy to support others. To fix this, there needs to be a way to store different bitmaps and ranges. The approach I came up with is as follows. First, it will store the number of locations, then it will store the data for each location. Each location will store the count, then the bitmap location, then the pages location.
+> [!TIP]
+> layout to help understanding. All values are 64-bit.   
+> [amount of locations][page list 1 count][page list 1 bitmap location][page list 1 page start location][page list 2 count][page list 2 bitmap location][page list 2 page start location][page list 3 count][page list 3 bitmap location][page list 3 page start location]---(other data)---[page list 1 bitmap]-(4096 alignment)-[page list 1 pages]---(other data)---[page list 2 bitmap]-(4096 alignment)-[page list 2 pages]---(other data)---[page list 3 bitmap]-(4096 alignment)-[page list 3 pages]    
+
+> [!CAUTION]
+> Note from the future: The approach here does have a security issue. The data right after other data must be aligned to 4096B. The reason is that if the data is passed into userspace, it will also include data afterwards, since it has to pass a full 4096B to virtual memory. This means the user could access kernel data they should not have access to. 
+
+
+## Coding it
+I finished programming this. I haven't got around to filling in info on what I ran into while coding it. 
+
+> [!NOTE]
+> Some misunderstandings here happened; I have written about them in the virtual memory devlog. 
