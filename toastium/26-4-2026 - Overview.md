@@ -15,7 +15,7 @@ For if the OS is POSTIX, I decided to follow the majority of POSTIX while making
  - Introduced a new IPC type. The types are 
    - Pipe: one-way send, one-way receive.
    - Socket: predefined code/id which is global and you can access. It's one that receives many processes send.
-   - Caster: predefined code/id which is global and you can access. It's one send, many receive. Each client will have its own buffer of items; they decide the size, and it starts deleting once it starts filling up. If no one is subscribed, the data is dropped.
+   - Caster: predefined code/id which is global and you can access. It's one send, many receive. Global buffer of items. Host decides the size, and it starts deleting once it starts filling up. If size is 1 it will automatically ignore all this buffer system and just be used to store data which is shared. Each client will store where read is up to in ring buffer. 
 
 If data is accessed on request, it can be done via a Caster with length one fairly cheaply; if it needs to be even faster, it can be done with memory mapped to RAM.    
 For permissions, I plan to add a tag to each process indicating whether it can access resources such as the framebuffer or the UART. This tag idea will apply to types as well for Caster and Socket. The permissions will be decided by the parent process which is launching it, a parent can't launch with more perms then it has. The idea of file access will be scrapped, and will possibly revisit it later.   
