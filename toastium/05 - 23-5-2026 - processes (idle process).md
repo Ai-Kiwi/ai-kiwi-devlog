@@ -1,7 +1,4 @@
-> [!WARNING]
-> The contents in this page are a very early revision. As of writing this, I have barely coded anything related to processes, and it is still in the planning and structure stage. Most of the content on this page will be replaced and added to at a later date.
-
-# Processes
+# Processes (idle process)
 
 Processes are where things start to get interesting and where everything starts to fall into place. It's going to be a beast of a writing. This devlog is the first one where I have already thought it is worth doing the write-up beforehand to make it less bad for later, and I haven't even coded a good chunk of it yet. A lot of the stuff here starts depending on each other. To do this cleanly, instead of doing temp fixes, I decided to code a lot of it properly first. It's also worth noting that my thoughts throughout much of this were messy and jumpy. I tried to group by area, but I jumped around a bit because some areas needed more thought. For this reason, I have split the sections while still trying to maintain a rough order.
 
